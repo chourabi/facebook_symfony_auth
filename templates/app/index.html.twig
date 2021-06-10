@@ -4,7 +4,18 @@
 {% block title %}Log in!{% endblock %}
 
 {% block body %}
-hi :D
+
+    <h1>Welcome back {{app_user.username}} </h1>
+
+    <h3>Linked facebook pages: </h3>
+    <ul>
+        {% for page in app_user.linkedFacebookPages %}
+            <li> 
+                Name: {{page.pageName}} <br>
+                Token: {{page.pageAccessToken}}
+            </li>
+        {% endfor %}
+    </ul>
 
 <a href=" {{ login_url }} ">facebook link</a>
 

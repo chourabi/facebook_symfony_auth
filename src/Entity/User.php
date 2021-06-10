@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -34,6 +36,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      * @ORM\Column(type="string")
      */
     private $password;
+
+    /**
+     * @ORM\Column(type="string", length=2000, nullable=true)
+     */
+    private $facebookAccessToken;
+
+    /**
+     * @ORM\OneToMany(targetEntity=LinkedFacebookPage::class, mappedBy="user")
+     */
+    private $linkedFacebookPages;
+
+    public function __construct()
+    {
+        $this->linkedFacebookPages = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -114,5 +131,47 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         // If you store any temporary, sensitive data on the user, clear it here
         // $this->plainPassword = null;
+    }
+
+    public function getFacebookAccessToken(): ?string
+    {
+        return $this->facebookAccessToken;
+    }
+
+    public function setFacebookAccessToken(?string $facebookAccessToken): self
+    {
+        $this->facebookAccessToken = $facebookAccessToken;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection|LinkedFacebookPage[]
+     */
+    public function getLinkedFacebookPages(): Collection
+    {
+        return $this->linkedFacebookPages;
+    }
+
+    public function addLinkedFacebookPage(LinkedFacebookPage $linkedFacebookPage): self
+    {
+        if (!$this->linkedFacebookPages->contains($linkedFacebookPage)) {
+            $this->linkedFacebookPages[] = $linkedFacebookPage;
+            $linkedFacebookPage->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeLinkedFacebookPage(LinkedFacebookPage $linkedFacebookPage): self
+    {
+        if ($this->linkedFacebookPages->removeElement($linkedFacebookPage)) {
+            // set the owning side to null (unless already changed)
+            if ($linkedFacebookPage->getUser() === $this) {
+                $linkedFacebookPage->setUser(null);
+            }
+        }
+
+        return $this;
     }
 }

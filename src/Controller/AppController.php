@@ -2,16 +2,15 @@
 
 namespace App\Controller;
 
+use App\Entity\LinkedFacebookPage;
+use App\Repository\LinkedFacebookPageRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
-
-
-
-
+use Symfony\Component\Security\Core\Security;
 
 class AppController extends AbstractController
 {
@@ -25,6 +24,8 @@ class AppController extends AbstractController
    */
   private $em;
 
+ 
+    
 
 
   /**
@@ -32,17 +33,18 @@ class AppController extends AbstractController
    * @param ClientRegistry $clientRegistry
    * @param EntityManagerInterface $em
    */
-  public function __construct(ClientRegistry $clientRegistry, EntityManagerInterface $em)
+  public function __construct(ClientRegistry $clientRegistry, EntityManagerInterface $em,Security $security)
   {
     $this->clientRegistry = $clientRegistry;
     $this->em = $em;
+    $this->security = $security;
   }
 
 
   /**
    * @Route("/home", name="app_home")
    */
-  public function homeindex(): Response
+  public function homeindex( LinkedFacebookPageRepository $linkedFacebookPageRepository ): Response
   {
     session_start();
 
@@ -80,6 +82,38 @@ class AppController extends AbstractController
           dump($pageAccessToken);
           dump($pageName);
           dump($pageId);
+
+          $user = $this->security->getUser();
+          $user->setFacebookAccessToken($tokenString);
+
+          $this->getDoctrine()->getManager()->flush();
+
+          // hundle page saveing
+          
+
+          // check if page exists
+
+          $check = $linkedFacebookPageRepository->findOneBy(array('pageID'=>$pageId));
+
+          if ($check != null) {
+            // update it
+            $check->setPageAccessToken($pageAccessToken);
+            $this->getDoctrine()->getManager()->flush();
+          }else{
+            $linkedFacebookPage = new LinkedFacebookPage();
+            $linkedFacebookPage->setPageID($pageId);
+            $linkedFacebookPage->setPageAccessToken($pageAccessToken);
+            $linkedFacebookPage->setPageName($pageName);
+            $linkedFacebookPage->setUser($user);
+            
+            $entityManager = $this->getDoctrine()->getManager();
+            $entityManager->persist($linkedFacebookPage);
+            $entityManager->flush();
+          }
+
+
+          // update the connected user
+
 
 
           // post to page
@@ -126,12 +160,9 @@ class AppController extends AbstractController
     } catch (\Throwable $th) {
       throw $th;
     }
+  
 
-
-    if (isset($_SESSION['fb_token'])) {
-      dump($_SESSION['fb_token']);
-    }
-
-    return $this->render('app/index.html.twig', ["login_url" => $login_url]);
+    $user = $this->security->getUser();
+    return $this->render('app/index.html.twig', ["login_url" => $login_url ,"app_user"=>$user ]);
   }
 }
